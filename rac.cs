@@ -11,6 +11,7 @@ const string ConfigSection = "Astral Codex";
 double _raycastRange;
 bool _enableRadioReplication;
 string _replicationKey;
+bool _enableRadarBroadcast;
 
 long _lastAsteroidId;
 
@@ -27,6 +28,7 @@ public Program() {
   _raycastRange = _configIni.Get(ConfigSection, "raycastRange").ToDouble(15000.0);
   _enableRadioReplication = _configIni.Get(ConfigSection, "enableRadioReplication").ToBoolean(true);
   _replicationKey = _configIni.Get(ConfigSection, "replicationKey").ToString("ASTRALCODEX");
+  _enableRadarBroadcast = _configIni.Get(ConfigSection, "enableRadarBroadcast").ToBoolean(true);
 
   _storageIni.TryParse(Storage);
 
@@ -42,14 +44,14 @@ public Program() {
   }
 
   if (_enableRadioReplication) {
-    Runtime.UpdateFrequency = UpdateFrequency.Update100;
+    Runtime.UpdateFrequency = UpdateFrequency.Update10 | UpdateFrequency.Update100;
 
     _broadcastListener = IGC.RegisterBroadcastListener(_replicationKey);
     _broadcastListener.SetMessageCallback(_replicationKey);
+    }
   }
-}
 
-public void Save() {
+  public void Save() {
   _storageIni.Clear();
 
   foreach(KeyValuePair<long, Asteroid> entry in Asteroids) {
@@ -63,7 +65,7 @@ public void Main(string argument, UpdateType updateSource) {
   if (_enableRadioReplication && (updateSource & UpdateType.Update100) != 0) {
     _replicationTicks++;
 
-    if (_replicationTicks > 5) {
+    if (_replicationTicks > 50) {
       _replicationTicks = 0;
 
       _replicationIni.Clear();
@@ -73,6 +75,16 @@ public void Main(string argument, UpdateType updateSource) {
       }
 
       IGC.SendBroadcastMessage(_replicationKey, _replicationIni.ToString());
+    }
+  }
+  if (_enableRadarBroadcast) {
+    foreach(KeyValuePair<long, Asteroid> entry in Asteroids) {
+      Asteroid asteroid = entry.Value;
+      int radius = (int) asteroid.Diameter / 2;
+      byte targetType = (asteroid.ID == _lastAsteroidId) ? (byte) 4 : (byte) 64;
+
+      var data = new MyTuple<byte, long, Vector3D, double>(targetType, asteroid.ID, asteroid.Position, radius * radius);
+      IGC.SendBroadcastMessage("IGC_IFF_MSG", data);
     }
   }
 
@@ -113,8 +125,11 @@ public void Main(string argument, UpdateType updateSource) {
   else if (arg == "delete") { Delete(); }
   else if (arg == "clear") { Asteroids.Clear(); _lastAsteroidId = 0; }
 
-  WriteStatusPanels();
-  WriteScriptStatus();
+
+  if ((updateSource & UpdateType.Update100) != 0) {
+    WriteStatusPanels();
+    WriteScriptStatus();
+  }
 }
 
 public void Scan() {
@@ -189,9 +204,9 @@ public void AddNote(string note) {
   asteroid.Notes = asteroid.Notes + " " + note;
   asteroid.LastUpdated = DateTime.UtcNow.ToUniversalTime();
   Asteroids[_lastAsteroidId] = asteroid;
-}
+  }
 
-public void GoTo() {
+  public void GoTo() {
   if (_lastAsteroidId == 0) {
     _statusMessage = "Scan or search for an asteroid first to fly to it.";
     return;
@@ -236,9 +251,9 @@ public void Delete() {
   Asteroids.Remove(_lastAsteroidId);
   _lastAsteroidId = 0;
   _statusMessage = "Asteroid deleted from database.";
-}
+  }
 
-public void WriteStatusPanels() {
+  public void WriteStatusPanels() {
   List<IMyTerminalBlock> taggedBlocks = new List<IMyTerminalBlock>();
   GridTerminalSystem.GetBlocksOfType(taggedBlocks, block => (block.CustomName.Contains("[Codex]") && (block is IMyTextSurfaceProvider) && (block as IMyTextSurfaceProvider).SurfaceCount > 0));
 
@@ -273,6 +288,7 @@ public void WriteStatusPanels() {
           (_statusMessage == "" ? "" : (_statusMessage + "\n")) +
           "Designation: " + asteroid.Designation +
           "\nDistance: " + kilometers + " km" +
+          "\nDiameter: " + asteroid.Diameter + " m" +
           "\nNotes: " + (asteroid.Notes == "" ? "(none)" : asteroid.Notes) +
           "\nDiscovered: " + asteroid.Discovered.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss") + " UTC" +
           "\nLocation: " + ToGPS(asteroid.Position, asteroid.Designation);
@@ -306,7 +322,12 @@ public void WriteScriptStatus() {
   Echo("Rosa's Astral Codex is running...");
   Echo("---");
   Echo("Asteroids in database: " + Asteroids.Count);
+  Echo("Maximum scan range: " + _raycastRange + " m");
   Echo("Radio replication: " + (_enableRadioReplication ? "ON" : "OFF"));
+  if (_enableRadioReplication) {
+    Echo("Replication key: " + _replicationKey);
+  }
+  Echo("Radar broadcast: " + (_enableRadarBroadcast ? "ON" : "OFF"));
 }
 
 public struct Asteroid {
@@ -314,6 +335,7 @@ public struct Asteroid {
     ID = info.EntityId;
     Designation = GenerateDesignation(info.EntityId);
     Position = info.Position;
+    Diameter = info.BoundingBox.Size.Y;
     Notes = "";
     Discovered = DateTime.UtcNow.ToUniversalTime();
     LastUpdated = DateTime.UtcNow.ToUniversalTime();
@@ -323,6 +345,7 @@ public struct Asteroid {
     ID = long.Parse(iniSection);
     Designation = ini.Get(iniSection, "designation").ToString(GenerateDesignation(ID));
     Position = FromGPS(ini.Get(iniSection, "gps").ToString());
+    Diameter = ini.Get(iniSection, "diameter").ToDouble(1024);
     Notes = ini.Get(iniSection, "notes").ToString("");
     string discoveredIso8601 = ini.Get(iniSection, "discovered").ToString(DateTime.UtcNow.ToUniversalTime().ToString("o"));
     Discovered = DateTime.Parse(discoveredIso8601);
@@ -333,6 +356,7 @@ public struct Asteroid {
   public long ID;
   public string Designation;
   public Vector3D Position;
+  public double Diameter;
   public string Notes;
   public DateTime Discovered;
   public DateTime LastUpdated;
@@ -342,6 +366,7 @@ public struct Asteroid {
 
     ini.Set(section, "designation", Designation);
     ini.Set(section, "gps", ToGPS(Position));
+    ini.Set(section, "diameter", Diameter);
     ini.Set(section, "notes", Notes);
     ini.Set(section, "discovered", LastUpdated.ToUniversalTime().ToString("o"));
     ini.Set(section, "lastUpdated", LastUpdated.ToUniversalTime().ToString("o"));
@@ -359,7 +384,7 @@ static readonly string[] _designations = {
   "Virginia", "Nemausa", "Europa", "Kalypso", "Alexandra", "Pandora", "Melete",
   "Mnemosyne", "Concordia", "Elpis", "Echo", "Danae", "Erato", "Ausonia",
   "Angelina", "Cybele", "Maja", "Asia", "Leto", "Hesperia"
-};
+  };
 
 static string GenerateDesignation(long id) {
   long sequenceNumber = id % 9999;
