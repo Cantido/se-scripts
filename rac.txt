@@ -1,0 +1,118 @@
+Rosa's Astral Codex allows you to scan asteroids using a camera to add them to the script's database, where you can then add nodes about the asteroid, search the notes from previous asteroids, and activate autopilot to fly to any selected asteroid.
+
+This script also supports sharing asteroid data with other grids through the antenna system, so you can synchronize all of your ships and share your prospecting results with your friends.
+
+[h2]Blocks used[/h2]
+
+All blocks are optional. Add the following blocks to unlock new functionality:
+
+[list]
+  [*]Camera - Point at an asteroid and run the "scan" command to record the asteroid's position to the database. Must have [code][Codex][/code] in its name.
+  [*]LCD - Display information about the currently selected/scanned asteroid. Must have [code][Codex][/code] in the name. (See below for more LCD uses).
+  [*]Antenna - Broadcasts asteroid locations to other grids running this script, and receive asteroid locations from them.
+  [*]Remote Control - Allows you to use the "go" argument to fly to an asteroid on autopilot.
+  [*]A "Whip's Turret-Based Radar" setup - see asteroids on your radar when you add them to the database.
+[/list]
+
+[h2]Commands[/h2]
+
+[table]
+  [tr]
+    [th]Command[/th]
+    [th]Description[/th]
+[/tr]
+  [tr]
+    [td]scan[/td]
+    [td]If pointing at an asteroid, the asteroid's location will be saved to the database, and will be selected for the other commands[/td]
+  [/tr]
+  [tr]
+    [td]note[/td]
+    [td]Sets notes for the currently-selected asteroid. For example, "note iron" will set the selected asteroid's notes to "iron".[/td]
+  [/tr]
+  [tr]
+    [td]note+[/td]
+    [td]Similar to the "note" command, but adds text to the end of the note instead of replacing it.[/td]
+  [/tr]
+  [tr]
+    [td]find[/td]
+    [td]Searches the asteroid database and selects the closest asteroid with a matching note. For example "find iron" would select the closest asteroid that has "iron" in its notes[/td]
+  [/tr]
+  [tr]
+    [td]go[/td]
+    [td]Starts autopilot to fly to the selected asteroid.[/td]
+  [/tr]
+  [tr]
+    [td]delete[/td]
+    [td]Removes the selected asteroid from the database.[/td]
+  [/tr]
+  [tr]
+    [td]clear[/td]
+    [td]Removes all asteroids from the database.[/td]
+  [/tr]
+[/table]
+
+[h2]Configuration[/h2]
+
+The behavior of the script can be tweaked in the custom data in a section named "Astral Codex". All values are optional.
+
+[table]
+  [tr]
+    [th]Key[/th]
+    [th]Default[/th]
+    [th]Description[/th]
+  [/tr]
+  [tr]
+    [td]raycastRange[/td]
+    [td]15000.0[/td]
+    [td]The maximum range, in meters, that cameras are allowed to scan. That this is meant to match the render distance of the game.[/td]
+  [/tr]
+  [tr]
+    [td]enableRadioReplication[/td]
+    [td]true[/td]
+    [td]Allow the script to broadcast the locations of asteroids to other grids running this script.[/td]
+  [/tr]
+  [tr]
+    [td]replicationKey[/td]
+    [td]ASTRALCODEX[/td]
+    [td]Allows you to keep your asteroid broadcasts separate from others. If you want to keep your asteroids private, but still synchronize their locations between your ships, change this value to any other text. It's kind of like a password.[/td]
+  [/tr]
+  [tr]
+    [td]enableRadarBroadcast[/td]
+    [td]true[/td]
+    [td]Allows the script to broadcast the locations of asteroids to Whip's Turret-Based Radar[/td]
+  [/tr]
+[/table]
+
+Here is an example containing the default values:
+
+[code]
+[Astral Codex]
+raycastRange=15000.0
+enableRadioReplication=true
+replicationKey=ASTRALCODEX
+enableRadarBroadcast=true
+[/code]
+
+[h2]Asteroid Radar[/h2]
+
+This script broadcasts asteroid locations to [url=https://steamcommunity.com/sharedfiles/filedetails/?id=1707280190]Whip's Turret-Based Radar[/url], so you can see asteroids around you if you've scanned them.
+
+Set up Whip's Radar like you would normally, and any ship in antenna range of this script will see asteroids on their radar.
+
+Remember that you can increase the range of the radar display with the "range" command. For example, running "range 20000" on the Radar script will allow you to see the asteroids farther away from you.
+
+[h2]LCD Configuration[/h2]
+
+By default, an LCD that has "[Codex]" in the name will display information about the selected asteroid.
+
+There is another mode that allows you to show the closest asteroids matching a search term. For example, the following custom data will make the LCD display the nearest iron asteroids.
+
+[code]
+[Astral Codex]
+mode=searchResults
+searchTerm=iron
+[/code]
+
+[h2]Acknowledgements[/h2]
+
+Many thanks go to Cruel Sun for the [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2147118115]Astronomicon[/url] script. Astral Codex can be considered a rewrite of Astronomicon.
