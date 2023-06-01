@@ -14,6 +14,8 @@ All blocks are optional. Add the following blocks to unlock new functionality:
   [*]A "Whip's Turret-Based Radar" setup - see asteroids on your radar when you add them to the database.
 [/list]
 
+Be warned, if the programmable block running this script gets destroyed, then your data could be lost! Run this script on multiple grids within antenna range to protect your investment.
+
 [h2]Commands[/h2]
 
 [table]
