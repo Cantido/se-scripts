@@ -113,6 +113,10 @@ mode=searchResults
 searchTerm=iron
 [/code]
 
+[h2]Source Code[/h2]
+
+Source code is available on [url=https://github.com/Cantido/se-scripts/blob/main/rac.cs]GitHub[/url].
+
 [h2]Acknowledgements[/h2]
 
 Many thanks go to Cruel Sun for the [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2147118115]Astronomicon[/url] script. Astral Codex can be considered a rewrite of Astronomicon.
