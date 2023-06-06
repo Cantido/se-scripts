@@ -13,6 +13,7 @@ bool _enableRadioReplication;
 string _replicationKey;
 bool _enableRadarBroadcast;
 double _stoppingDistance;
+double _radarRange;
 
 long _lastAsteroidId;
 
@@ -30,6 +31,7 @@ public Program() {
   _enableRadioReplication = _configIni.Get(ConfigSection, "enableRadioReplication").ToBoolean(true);
   _replicationKey = _configIni.Get(ConfigSection, "replicationKey").ToString("ASTRALCODEX");
   _enableRadarBroadcast = _configIni.Get(ConfigSection, "enableRadarBroadcast").ToBoolean(true);
+  _radarRange = _configIni.Get(ConfigSection, "radarRange").ToDouble(50000.0);
   _stoppingDistance = _configIni.Get(ConfigSection, "stoppingDistance").ToDouble(1000.0);
 
   _storageIni.TryParse(Storage);
@@ -79,14 +81,21 @@ public void Main(string argument, UpdateType updateSource) {
       IGC.SendBroadcastMessage(_replicationKey, _replicationIni.ToString());
     }
   }
-  if (_enableRadarBroadcast) {
+  if (_enableRadarBroadcast && (updateSource & UpdateType.Update10) != 0) {
     foreach(KeyValuePair<long, Asteroid> entry in Asteroids) {
       Asteroid asteroid = entry.Value;
-      int radius = (int) asteroid.Diameter / 2;
-      byte targetType = (asteroid.ID == _lastAsteroidId) ? (byte) 4 : (byte) 64;
 
-      var data = new MyTuple<byte, long, Vector3D, double>(targetType, asteroid.ID, asteroid.Position, radius * radius);
-      IGC.SendBroadcastMessage("IGC_IFF_MSG", data);
+      if (Vector3D.Distance(asteroid.Position, Me.GetPosition()) < _radarRange) {
+        int radius = (int) asteroid.Diameter / 2;
+        byte targetType = 64;
+
+        if (asteroid.ID == _lastAsteroidId)  {
+          targetType += (byte) 4;
+        }
+
+        var data = new MyTuple<byte, long, Vector3D, double>(targetType, asteroid.ID, asteroid.Position, radius * radius);
+        IGC.SendBroadcastMessage("IGC_IFF_MSG", data, TransmissionDistance.CurrentConstruct);
+      }
     }
   }
 
