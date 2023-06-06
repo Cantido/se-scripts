@@ -12,6 +12,7 @@ double _raycastRange;
 bool _enableRadioReplication;
 string _replicationKey;
 bool _enableRadarBroadcast;
+double _stoppingDistance;
 
 long _lastAsteroidId;
 
@@ -29,6 +30,7 @@ public Program() {
   _enableRadioReplication = _configIni.Get(ConfigSection, "enableRadioReplication").ToBoolean(true);
   _replicationKey = _configIni.Get(ConfigSection, "replicationKey").ToString("ASTRALCODEX");
   _enableRadarBroadcast = _configIni.Get(ConfigSection, "enableRadarBroadcast").ToBoolean(true);
+  _stoppingDistance = _configIni.Get(ConfigSection, "stoppingDistance").ToDouble(1000.0);
 
   _storageIni.TryParse(Storage);
 
@@ -206,7 +208,7 @@ public void AddNote(string note) {
   Asteroids[_lastAsteroidId] = asteroid;
   }
 
-  public void GoTo() {
+public void GoTo() {
   if (_lastAsteroidId == 0) {
     _statusMessage = "Scan or search for an asteroid first to fly to it.";
     return;
@@ -215,16 +217,33 @@ public void AddNote(string note) {
   _statusMessage = "Navigating to asteroid.";
   List<IMyRemoteControl> remoteControls = new List<IMyRemoteControl>();
   GridTerminalSystem.GetBlocksOfType(remoteControls);
-
   IMyRemoteControl rc = remoteControls.First();
-  rc.ClearWaypoints();
 
-  Asteroid destination = Asteroids[_lastAsteroidId];
-  rc.AddWaypoint(destination.Position, destination.ID.ToString());
+  Asteroid destAst = Asteroids[_lastAsteroidId];
+  Vector3D astPos = destAst.Position;
+  Vector3D myPos = rc.GetPosition();
 
-  rc.SetCollisionAvoidance(true);
-  rc.FlightMode = FlightMode.OneWay;
-  rc.SetAutoPilotEnabled(true);
+  Vector3D pathToCenter = Vector3D.Subtract(astPos, myPos);
+
+  double stoppingDistance = (destAst.Diameter / 2) + _stoppingDistance;
+
+  if (stoppingDistance < pathToCenter.Length()) {
+    double shortenScale = 1.0 - (stoppingDistance / pathToCenter.Length());
+
+    Vector3D rcPath = Vector3D.Multiply(pathToCenter, shortenScale);
+
+    Vector3D destination = Vector3D.Add(myPos, rcPath);
+
+    rc.ClearWaypoints();
+
+    rc.AddWaypoint(destination, destAst.ID.ToString());
+
+    rc.SetCollisionAvoidance(true);
+    rc.FlightMode = FlightMode.OneWay;
+    rc.SetAutoPilotEnabled(true);
+  } else {
+    _statusMessage = "Navigation cancelled; already in proximity.";
+  }
 }
 
 public void Find(string query) {
@@ -253,7 +272,7 @@ public void Delete() {
   _statusMessage = "Asteroid deleted from database.";
   }
 
-  public void WriteStatusPanels() {
+public void WriteStatusPanels() {
   List<IMyTerminalBlock> taggedBlocks = new List<IMyTerminalBlock>();
   GridTerminalSystem.GetBlocksOfType(taggedBlocks, block => (block.CustomName.Contains("[Codex]") && (block is IMyTextSurfaceProvider) && (block as IMyTextSurfaceProvider).SurfaceCount > 0));
 

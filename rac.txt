@@ -83,6 +83,11 @@ The behavior of the script can be tweaked in the custom data in a section named 
     [td]true[/td]
     [td]Allows the script to broadcast the locations of asteroids to Whip's Turret-Based Radar[/td]
   [/tr]
+  [tr]
+    [td]stoppingDistance[/td]
+    [td]1000.0[/td]
+    [td]The distance (in meters) away from an asteroid that the autopilot will stop at.[/td]
+  [/tr]
 [/table]
 
 Here is an example containing the default values:
@@ -93,6 +98,7 @@ raycastRange=15000.0
 enableRadioReplication=true
 replicationKey=ASTRALCODEX
 enableRadarBroadcast=true
+stoppingDistance=1000.0
 [/code]
 
 [h2]Asteroid Radar[/h2]
