@@ -107,6 +107,13 @@ radarRange=50000.0
 stoppingDistance=1000.0
 [/code]
 
+
+[h2]Passive Scanning[/h2]
+
+Set add the "[Codex Passive]" tag to the name of a camera to slowly but surely scan for asteroids automatically. Since each scan attempt takes time to charge, more cameras are better.
+
+Any sensor with "Detect Asteroids" enabled will also automatically add an asteroid to the database if it is within range of the sensor.
+
 [h2]Asteroid Radar[/h2]
 
 This script broadcasts asteroid locations to [url=https://steamcommunity.com/sharedfiles/filedetails/?id=1707280190]Whip's Turret-Based Radar[/url], so you can see asteroids around you if you've scanned them.

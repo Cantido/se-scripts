@@ -6,6 +6,12 @@ MyIni _storageIni = new MyIni();
 MyIni _configIni = new MyIni();
 MyIni _replicationIni = new MyIni();
 
+List<IMySensorBlock> _sensors = new List<IMySensorBlock>();
+List<MyDetectedEntityInfo> _entityInfo = new List<MyDetectedEntityInfo>();
+List<IMyCameraBlock> _passiveCameras = new List<IMyCameraBlock>();
+
+Random _random = new Random();
+
 const string ConfigSection = "Astral Codex";
 
 double _raycastRange;
@@ -136,8 +142,12 @@ public void Main(string argument, UpdateType updateSource) {
   else if (arg == "delete") { Delete(); }
   else if (arg == "clear") { Asteroids.Clear(); _lastAsteroidId = 0; }
 
+  if ((updateSource & UpdateType.Update10) != 0) {
+    DoPassiveCameraScan();
+  }
 
   if ((updateSource & UpdateType.Update100) != 0) {
+    DoSensorScan();
     WriteStatusPanels();
     WriteScriptStatus();
   }
@@ -215,7 +225,7 @@ public void AddNote(string note) {
   asteroid.Notes = asteroid.Notes + " " + note;
   asteroid.LastUpdated = DateTime.UtcNow.ToUniversalTime();
   Asteroids[_lastAsteroidId] = asteroid;
-  }
+}
 
 public void GoTo() {
   if (_lastAsteroidId == 0) {
@@ -279,7 +289,72 @@ public void Delete() {
   Asteroids.Remove(_lastAsteroidId);
   _lastAsteroidId = 0;
   _statusMessage = "Asteroid deleted from database.";
+}
+
+public void DoSensorScan() {
+  _sensors.Clear();
+  GridTerminalSystem.GetBlocksOfType(_sensors);
+
+  foreach(IMySensorBlock sensor in _sensors) {
+    if (sensor.DetectAsteroids) {
+      sensor.DetectedEntities(_entityInfo);
+
+      foreach(MyDetectedEntityInfo entity in _entityInfo) {
+        if (entity.IsEmpty()) {
+          continue;
+        }
+
+        if (entity.Type != MyDetectedEntityType.Asteroid) {
+          continue;
+        }
+
+        if (!Asteroids.ContainsKey(entity.EntityId)) {
+          _statusMessage = "New asteroid discovered via passive scanning!";
+          Asteroid asteroid = new Asteroid(entity);
+          Asteroids.Add(asteroid.ID, asteroid);
+
+          _lastAsteroidId = entity.EntityId;
+        }
+      }
+    }
   }
+}
+
+public void DoPassiveCameraScan() {
+  _passiveCameras.Clear();
+  GridTerminalSystem.GetBlocksOfType(_passiveCameras, camera => camera.CustomName.Contains("[Codex Passive]"));
+
+  foreach(IMyCameraBlock camera in _passiveCameras) {
+    camera.EnableRaycast = true;
+
+    if (!camera.CanScan(_raycastRange)) {
+      continue;
+    }
+
+    double coneLimit = (double) camera.RaycastConeLimit;
+
+    double pitch = _random.NextDouble() * coneLimit * 2 - coneLimit;
+    double yaw = _random.NextDouble() * coneLimit * 2 - coneLimit;
+
+    MyDetectedEntityInfo entity = camera.Raycast(_raycastRange, (float) pitch, (float) yaw);
+
+    if (entity.IsEmpty()) {
+      continue;
+    }
+
+    if (entity.Type != MyDetectedEntityType.Asteroid) {
+      continue;
+    }
+
+    if (!Asteroids.ContainsKey(entity.EntityId)) {
+      _statusMessage = "New asteroid discovered via passive scanning!";
+      Asteroid asteroid = new Asteroid(entity);
+      Asteroids.Add(asteroid.ID, asteroid);
+
+      _lastAsteroidId = entity.EntityId;
+    }
+  }
+}
 
 public void WriteStatusPanels() {
   List<IMyTerminalBlock> taggedBlocks = new List<IMyTerminalBlock>();
@@ -356,6 +431,7 @@ public void WriteScriptStatus() {
     Echo("Replication key: " + _replicationKey);
   }
   Echo("Radar broadcast: " + (_enableRadarBroadcast ? "ON" : "OFF"));
+  Echo("Passively scanning with " + _passiveCameras.Count + " cameras and " + _sensors.Count + " sensors");
 }
 
 public struct Asteroid {
