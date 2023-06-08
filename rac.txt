@@ -110,7 +110,7 @@ stoppingDistance=1000.0
 
 [h2]Passive Scanning[/h2]
 
-Set add the "[Codex Passive]" tag to the name of a camera to slowly but surely scan for asteroids automatically. Since each scan attempt takes time to charge, more cameras are better.
+Add the "[Codex Passive]" tag to the name of a camera to slowly but surely scan for asteroids automatically. Since each scan attempt takes time to charge, more cameras are better.
 
 Any sensor with "Detect Asteroids" enabled will also automatically add an asteroid to the database if it is within range of the sensor.
 
